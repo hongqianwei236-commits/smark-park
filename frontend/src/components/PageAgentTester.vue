@@ -5,16 +5,20 @@
         <div class="tester-header">
           <div>
             <div class="tester-title">Page Agent 测试助手</div>
-            <div class="tester-subtitle">直接输入指令，验证页面自动操作效果</div>
+            <div class="tester-subtitle">
+              直接输入指令，验证页面自动操作效果
+            </div>
           </div>
           <el-button text @click="visible = false">收起</el-button>
         </div>
 
         <div class="tester-env-summary">
           <el-tag :type="hasApiKey ? 'success' : 'warning'" size="small">
-            {{ hasApiKey ? '已检测到 API Key' : '未检测到 API Key' }}
+            {{ hasApiKey ? "已检测到 API Key" : "未检测到 API Key" }}
           </el-tag>
-          <span class="env-hint">读取来源：`import.meta.env.VITE_PAGE_AGENT_API_KEY`</span>
+          <span class="env-hint"
+            >读取来源：`import.meta.env.VITE_PAGE_AGENT_API_KEY`</span
+          >
         </div>
 
         <el-alert
@@ -76,66 +80,72 @@
       </div>
     </transition>
 
-    <el-button class="tester-fab" type="primary" circle @click="visible = !visible">
+    <el-button
+      class="tester-fab"
+      type="primary"
+      circle
+      @click="visible = !visible"
+    >
       助
     </el-button>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { executeInstruction } from '../utils/pageAgent'
+import { reactive, ref } from "vue";
+import { ElMessage } from "element-plus";
+import { executeInstruction } from "../utils/pageAgent";
 
-const visible = ref(true)
-const executing = ref(false)
-const instruction = ref('')
-const hasApiKey = Boolean(import.meta.env.VITE_PAGE_AGENT_API_KEY)
-const currentModel = import.meta.env.VITE_PAGE_AGENT_MODEL || 'kimi-k2.5'
-const currentBaseURL = import.meta.env.VITE_PAGE_AGENT_BASE_URL || 'https://api.moonshot.cn/v1'
-const currentLanguage = import.meta.env.VITE_PAGE_AGENT_LANGUAGE || 'zh-CN'
+const visible = ref(true);
+const executing = ref(false);
+const instruction = ref("");
+const hasApiKey = Boolean(import.meta.env.VITE_PAGE_AGENT_API_KEY);
+const currentModel = import.meta.env.VITE_PAGE_AGENT_MODEL || "kimi-k2.5";
+const currentBaseURL =
+  import.meta.env.VITE_PAGE_AGENT_BASE_URL || "https://api.moonshot.cn/v1";
+const currentLanguage = import.meta.env.VITE_PAGE_AGENT_LANGUAGE || "zh-CN";
 
 const quickActions = [
-  '点击左侧菜单“租户管理”，再点击“租户列表”',
-  '点击左侧菜单“租户管理”，进入“租户列表”后搜索华为',
-  '点击左侧菜单“项目管理”，再点击“项目列表”',
-  '点击左侧菜单“资产管理”，展开“楼栋管理”，再点击“楼栋列表”',
-  '点击左侧菜单“合同管理”，再点击“合同审批”'
-]
+  "点击左侧菜单“租户管理”，再点击“租户列表”",
+  "点击左侧菜单“租户管理”，进入“租户列表”后搜索华为",
+  "点击左侧菜单“项目管理”，再点击“项目列表”",
+  "点击左侧菜单“资产管理”，展开“楼栋管理”，再点击“楼栋列表”",
+  "点击左侧菜单“合同管理”，再点击“合同审批”",
+];
 
 const status = reactive({
-  type: 'idle',
+  type: "idle",
   message: hasApiKey
-    ? '请输入指令后点击执行，或使用下方快捷测试指令。'
-    : '请先在 .env 文件中配置 VITE_PAGE_AGENT_API_KEY。'
-})
+    ? "请输入指令后点击执行，或使用下方快捷测试指令。"
+    : "请先在 .env 文件中配置 VITE_PAGE_AGENT_API_KEY。",
+});
 
 function applyQuickAction(text) {
-  instruction.value = text
+  instruction.value = text;
 }
 
 async function handleExecute() {
   if (!instruction.value.trim()) {
-    status.type = 'error'
-    status.message = '请输入要执行的指令'
-    return
+    status.type = "error";
+    status.message = "请输入要执行的指令";
+    return;
   }
 
-  executing.value = true
-  status.type = 'running'
-  status.message = `正在执行：${instruction.value}`
+  executing.value = true;
+  status.type = "running";
+  status.message = `正在执行：${instruction.value}`;
 
   try {
-    const result = await executeInstruction(instruction.value)
-    status.type = 'success'
-    status.message = result.message
-    ElMessage.success(result.message)
+    const result = await executeInstruction(instruction.value);
+    status.type = "success";
+    status.message = result.message;
+    ElMessage.success(result.message);
   } catch (error) {
-    status.type = 'error'
-    status.message = error?.message || String(error) || '执行失败'
-    ElMessage.error(status.message)
+    status.type = "error";
+    status.message = error?.message || String(error) || "执行失败";
+    ElMessage.error(status.message);
   } finally {
-    executing.value = false
+    executing.value = false;
   }
 }
 </script>
