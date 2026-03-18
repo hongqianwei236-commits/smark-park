@@ -1,0 +1,9 @@
+{
+  "name": "smart-park-assistant",
+  "version": "1.0.0",
+  "description": "本地占位 SDK，用于本地开发",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

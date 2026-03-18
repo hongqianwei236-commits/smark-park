@@ -1,0 +1,15 @@
+{
+  "name": "park-saas",
+  "version": "1.0.0",
+  "description": "一套完整的园区管理演示系统，包含租户、项目、楼栋、合同等核心功能模块。",
+  "main": "playwright.config.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}
