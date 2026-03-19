@@ -51,20 +51,53 @@ function summarizeActivity(activity) {
   }
 }
 
-function stringifyValue(value) {
-  if (value == null) return ''
-  if (typeof value === 'string') return value
+function humanizeToolName(toolName) {
+  if (!toolName) return ''
 
-  try {
-    return JSON.stringify(value, null, 2)
-  } catch {
-    return String(value)
+  const normalized = String(toolName).toLowerCase()
+  const mappings = [
+    ['click_element', '点击元素'],
+    ['click element', '点击元素'],
+    ['click_element_by_index', '点击元素'],
+    ['click element by index', '点击元素'],
+    ['input_text', '输入文本'],
+    ['type_text', '输入文本'],
+    ['fill_input', '填写输入框'],
+    ['select_option', '选择选项'],
+    ['navigate', '页面跳转'],
+    ['goto', '页面跳转'],
+    ['wait', '等待页面'],
+    ['wait_for', '等待页面'],
+    ['scroll', '滚动页面'],
+    ['hover', '悬停元素'],
+    ['press_key', '按下按键'],
+    ['read', '读取页面'],
+    ['observe', '观察页面']
+  ]
+
+  for (const [keyword, label] of mappings) {
+    if (normalized.includes(keyword)) {
+      return label
+    }
   }
+
+  return String(toolName)
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 function formatStepEvent(event) {
   const items = []
   const stepTitle = `第 ${(event.stepIndex ?? 0) + 1} 步`
+  const toolTags = [
+    event.action?.tool,
+    event.action?.name,
+    event.action?.type,
+    event.tool,
+    event.toolName
+  ]
+    .filter(Boolean)
+    .map(humanizeToolName)
 
   if (event.reflection) {
     const { evaluation_previous_goal, memory, next_goal } = event.reflection
@@ -81,6 +114,8 @@ function formatStepEvent(event) {
         title: `${stepTitle} · 思考步骤`,
         text: reflectionLines.join('\n'),
         meta: stepTitle,
+        stepIndex: event.stepIndex ?? 0,
+        toolTags: [...new Set(toolTags)],
         raw: event
       })
     }
@@ -167,6 +202,33 @@ function appendTimeline(item) {
     ...item
   })
   state.timelineVersion += 1
+}
+
+function requestUserConfirmation(question) {
+  state.waitingForAnswer = true
+  state.pendingQuestion = question
+  state.status = 'idle'
+  state.activity = null
+  state.activityText = '等待你的确认信息…'
+  upsertEphemeralActivity(null)
+  appendTimeline({
+    kind: 'question',
+    title: '需要你确认',
+    text: question,
+    ephemeral: true
+  })
+
+  return new Promise((resolve) => {
+    answerResolver = (answer) => {
+      appendTimeline({
+        kind: 'answer',
+        title: '你的补充',
+        text: answer,
+        ephemeral: true
+      })
+      resolve(answer)
+    }
+  })
 }
 
 function bumpTimeline() {
@@ -266,7 +328,10 @@ function createAgent() {
   const pageController = new PageController({
     enableMask: true,
     highlightOpacity: 0,
-    highlightLabelOpacity: 0
+    highlightLabelOpacity: 0,
+    highlightBorderWidth: 0,
+    highlightInset: 0,
+    maskColor: 'rgba(15, 23, 42, 0.16)'
   })
 
   const instance = new PageAgentCore({
@@ -275,26 +340,7 @@ function createAgent() {
   })
 
   instance.onAskUser = async (question) => {
-    state.waitingForAnswer = true
-    state.pendingQuestion = question
-    appendTimeline({
-      kind: 'question',
-      title: '助手追问',
-      text: question,
-      ephemeral: true
-    })
-
-    return new Promise((resolve) => {
-      answerResolver = (answer) => {
-        appendTimeline({
-          kind: 'answer',
-          title: '用户回答',
-          text: answer,
-          ephemeral: true
-        })
-        resolve(answer)
-      }
-    })
+    return requestUserConfirmation(question)
   }
 
   bindAgentEvents(instance)
@@ -351,6 +397,12 @@ async function execute() {
   state.task = text
   state.input = ''
   state.visible = true
+  appendTimeline({
+    kind: 'intro',
+    title: '助手响应',
+    text: '了解指令，我来帮您逐步处理。',
+    ephemeral: true
+  })
   appendTimeline({ kind: 'task', title: '任务', text })
 
   try {
@@ -364,6 +416,12 @@ async function execute() {
     return result
   } catch (error) {
     state.error = error?.message || String(error) || '执行失败'
+
+    if (!state.waitingForAnswer && /确认|clarify|which|是否|请选择|请提供|请确认/i.test(state.error)) {
+      await requestUserConfirmation(state.error)
+      return { success: false, data: state.error, pendingConfirmation: true }
+    }
+
     appendTimeline({
       kind: 'error',
       title: '执行异常',
@@ -437,7 +495,7 @@ export function usePageAssistant() {
     canStop,
     execute,
     stop,
-  switchModel,
+    switchModel,
     dispose,
     resetSession,
     ensureAgent,
