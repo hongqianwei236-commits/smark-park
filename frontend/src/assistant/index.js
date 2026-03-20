@@ -1,4 +1,9 @@
 import PageAssistant from './PageAssistant.vue'
 
-export { usePageAssistant } from './usePageAssistant'
+export {
+	createPageAssistantController,
+	resetDefaultPageAssistant,
+	usePageAssistant
+} from './usePageAssistant'
+export { createElementPlusNotifier } from './notifications'
 export default PageAssistant

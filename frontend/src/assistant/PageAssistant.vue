@@ -277,8 +277,19 @@ import {
   ref,
   watch,
 } from "vue";
-import { ElMessage } from "element-plus";
 import { usePageAssistant } from "./usePageAssistant";
+import { createElementPlusNotifier } from "./notifications";
+
+const props = defineProps({
+  assistantConfig: {
+    type: Object,
+    default: () => ({}),
+  },
+  notifier: {
+    type: Object,
+    default: () => createElementPlusNotifier(),
+  },
+});
 
 const timelineRef = ref(null);
 const autoFollowTimeline = ref(true);
@@ -298,7 +309,12 @@ const {
   resetSession,
   setInput,
   toggleVisible,
-} = usePageAssistant();
+  updateConfig,
+  notify,
+} = usePageAssistant({
+  config: props.assistantConfig,
+  notify: props.notifier,
+});
 
 const displayTimeline = computed(() =>
   state.timeline.map((item) => ({
@@ -387,12 +403,12 @@ async function handleSubmit() {
       !result?.pendingConfirmation &&
       result?.data
     ) {
-      ElMessage.success(
+      notify.success(
         typeof result.data === "string" ? result.data : "任务执行完成",
       );
     }
   } catch (error) {
-    ElMessage.error(error?.message || String(error) || "执行失败");
+    notify.error(error?.message || String(error) || "执行失败");
   }
 }
 
@@ -405,7 +421,7 @@ function handleComposerKeydown(event) {
 
 function handleStop() {
   stop();
-  ElMessage.warning("已停止当前任务");
+  notify.warning("已停止当前任务");
 }
 
 function toggleModelMenu() {
@@ -415,8 +431,16 @@ function toggleModelMenu() {
 function selectModel(model) {
   switchModel(model);
   isModelMenuOpen.value = false;
-  ElMessage.success(`已切换到模型：${model}`);
+  notify.success(`已切换到模型：${model}`);
 }
+
+watch(
+  () => props.assistantConfig,
+  (value) => {
+    updateConfig(value || {});
+  },
+  { deep: true },
+);
 
 function handleClickOutside(event) {
   if (!modelMenuRef.value) return;
